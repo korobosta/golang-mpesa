@@ -28,6 +28,8 @@ func Connect() (db *sql.DB) {
 
 func main() {
 
+	log.Println(EncryptWithPublicKey("koros",1,"koros"))
+
 	router := mux.NewRouter()
 	
 	config := Config{}

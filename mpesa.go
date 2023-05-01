@@ -374,17 +374,18 @@ func DecodeTransactionQueryCallbackResponse (b []byte) Payment{
 	if err != nil {
 		log.Println(err)
 	}else{
-		log.Println(transactionQueryCallbackResponse)
 		resultType := transactionQueryCallbackResponse.Result.ResultType
 		if(resultType ==0){
-			paybill := fmt.Sprintf("%f",transactionQueryCallbackResponse.Result.ResultParameters.ResultParameter[0].Value)
+			paybill := transactionQueryCallbackResponse.Result.ResultParameters.ResultParameter[0].Value.(string)
+			log.Println(paybill)
 			arrPaybill := strings.Split(paybill, "-")
 			businessShortCode := arrPaybill[0]
 
-			customer := fmt.Sprintf("%f",transactionQueryCallbackResponse.Result.ResultParameters.ResultParameter[1].Value)
+			customer := transactionQueryCallbackResponse.Result.ResultParameters.ResultParameter[1].Value.(string)
 			arrCustomer := strings.Split(customer, "-")
 			phoneNumber := arrCustomer[0]
 			name := arrCustomer[1]
+			name = strings.TrimSpace(name)
 			nameErr := strings.Split(name, " ")
 			firstName := nameErr[0]
 			lastName := nameErr[len(nameErr)-1]
@@ -393,9 +394,9 @@ func DecodeTransactionQueryCallbackResponse (b []byte) Payment{
 			payment.LastName =lastName
 			payment.BusinessShortCode =businessShortCode
 			payment.MSISDN =phoneNumber
-			payment.TransID = fmt.Sprintf("%f",transactionQueryCallbackResponse.Result.ResultParameters.ResultParameter[12].Value)
-			payment.TransAmount = fmt.Sprintf("%f",transactionQueryCallbackResponse.Result.ResultParameters.ResultParameter[10].Value)
-			payment.TransTime =fmt.Sprintf("%f",transactionQueryCallbackResponse.Result.ResultParameters.ResultParameter[9].Value)
+			payment.TransID = transactionQueryCallbackResponse.Result.ResultParameters.ResultParameter[12].Value.(string)
+			payment.TransAmount = transactionQueryCallbackResponse.Result.ResultParameters.ResultParameter[10].Value.(string)
+			payment.TransTime =transactionQueryCallbackResponse.Result.ResultParameters.ResultParameter[9].Value.(string)
 		}
 	}
 
