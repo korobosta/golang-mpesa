@@ -1,4 +1,4 @@
-module mpesa
+module github.com/korobosta/golang-mpesa
 
 go 1.19
 
