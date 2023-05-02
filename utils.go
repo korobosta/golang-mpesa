@@ -1,4 +1,4 @@
-package mpesa
+package golang_mpesa
 
 import (
 	"crypto/rand"
