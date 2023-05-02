@@ -1,4 +1,4 @@
-package main
+package mpesa
 
 import (
 	"crypto/rand"
@@ -6,11 +6,21 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
+	"fmt"
 	"io/ioutil"
 	"log"
+	randString "math/rand"
+	"time"
 )
 
-func EncryptWithPublicKey( msg string,env int, password string) string {
+func RandomString(length int) string {
+    randString.Seed(time.Now().UnixNano())
+    b := make([]byte, length+2)
+    rand.Read(b)
+    return fmt.Sprintf("%x", b)[2 : length+2]
+}
+
+func EncryptWithPublicKey( password string,env int) string {
 	//byteMessage := []byte(message)
 	var f = ""
 	if env == 1{

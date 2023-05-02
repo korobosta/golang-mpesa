@@ -1,4 +1,4 @@
-package main
+package mpesa
 
 import (
 	"bytes"
@@ -16,9 +16,11 @@ import (
 
 var TEST_MPESA_TOKEN_URL string ="https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
 var TEST_MPESA_STK_PUSH_URL ="https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
+var TEST_MPESA_TRANSACTION_QUERY_URL = "https://sandbox.safaricom.co.ke/mpesa/transactionstatus/v1/query"
 
 var LIVE_MPESA_TOKEN_URL ="https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
 var LIVE_MPESA_STK_PUSH_URL ="https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
+var LIVE_MPESA_TRANSACTION_QUERY_URL = "https://api.safaricom.co.ke/mpesa/transactionstatus/v1/query"
 
 func GenerateMpesaToken(config Config) TokenFeedback {
 
@@ -401,6 +403,118 @@ func DecodeTransactionQueryCallbackResponse (b []byte) Payment{
 	}
 
 	return payment
+}
+
+func TransactionQuery(config Config) TransactionQueryFeedback{
+
+	var errors string = ""
+	var accessToken string = ""
+	var success bool = false
+	m := make(map[string]string)
+
+	tokenFeedback := TokenFeedback{}
+	transactionQueryFeedback := TransactionQueryFeedback{}
+
+	tokenFeedback = GenerateMpesaToken(config)
+
+	if tokenFeedback.Success == false{
+		errors = tokenFeedback.Error
+	}else{
+		accessToken =tokenFeedback.AccessToken
+		var url string =""
+		if config.MpesaStkPushUrl==""{
+			if config.Env  == 1{
+				url = LIVE_MPESA_TRANSACTION_QUERY_URL
+			}else{
+				url = TEST_MPESA_TRANSACTION_QUERY_URL
+			}
+		}
+		
+		method := "POST"
+	
+		payload := map[string]any{
+			"Initiator":config.Initiator,
+			"SecurityCredential": EncryptWithPublicKey(config.InitiatorPassword,config.Env),
+			"CommandID": config.TransQueryCommandID,
+			"TransactionID": config.TransactionReference,
+			"OriginatorConversationID":config.TransQueryOriginatorConversationID,
+			"PartyA":config.MpesaShortCode,
+			"IdentifierType":config.IdentifierType,
+			"ResultURL":config.TransQueryResultURL,
+			"QueueTimeOutURL":config.TransQueryQueueTimeOutURL,
+			"Remarks":config.TransQueryRemarks,
+			"Occasion":config.TransQueryOccassion,
+		}
+	
+		jsonPayload, err := json.Marshal(payload)
+
+		if err != nil {
+			errors =err.Error()
+		}else{
+			client := &http.Client {
+				}
+			req, err := http.NewRequest(method, url, bytes.NewBuffer(jsonPayload))
+			if err != nil {
+				errors = err.Error()
+			}else{
+				req.Header.Add("Content-Type", "application/json")
+				req.Header.Add("Authorization", "Bearer "+accessToken)
+				res, err := client.Do(req)
+				if err != nil {
+					errors = err.Error()
+				}else{
+					defer res.Body.Close()
+		            body, err := ioutil.ReadAll(res.Body)
+					if err != nil {
+						errors = err.Error()
+					}else{
+						err = json.Unmarshal(body, &m)
+						if err != nil {
+							errors = err.Error()
+						}else{
+							if responseCode, ok := m["ResponseCode"]; ok {
+								if responseCode == "0"{
+									success = true
+									transQueryTable := TransQueryTable{};
+									if(config.TransQueryTable != transQueryTable){
+										transQueryData := TransQueryTableColumns{}
+										transQueryData.Status ="0"
+										transQueryData.ResponseDescription =m["ResponseDescription"]
+										transQueryData.ConversationID = m["ConversationID"]
+										transQueryData.OriginatorConversationID = m["OriginatorConversationID"]
+										transQueryData.TransactionReference = config.TransactionReference
+										transQueryData.AccountReference= config.AccountNumber
+										SaveTransQueryData(transQueryData,config.TransQueryTable)
+									}
+								}else{
+									if errorMessage, ok := m["errorMessage"]; ok {
+										errors = errorMessage
+									}else{
+										errors ="Unknown error occured"
+									}
+								}
+							}
+						}
+					}
+				}
+
+			}
+		}
+	}
+
+	transactionQueryFeedback.Error = errors
+	transactionQueryFeedback.MpesaResponse = m
+	transactionQueryFeedback.Success = success
+	
+	return transactionQueryFeedback
+}
+
+func SaveTransQueryData(data TransQueryTableColumns,db TransQueryTable){
+	save, err := db.DbConnection.Prepare("INSERT INTO "+db.TableName+"("+db.Columns.ConversationID+","+db.Columns.OriginatorConversationID+","+db.Columns.ResponseCode+","+db.Columns.AccountReference+","+db.Columns.ResponseDescription+","+db.Columns.Status+","+db.Columns.TransactionReference+") VALUES(?,?,?,?,?,?,?)")
+	if err != nil {
+		log.Println(err)
+	}
+	save.Exec(data.ConversationID, data.OriginatorConversationID, data.ResponseCode, data.AccountReference,data.ResponseDescription,data.Status,data.TransactionReference)
 }
 
 		

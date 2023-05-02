@@ -1,4 +1,4 @@
-package main
+package mpesa
 
 import "database/sql"
 
@@ -15,7 +15,18 @@ type Config struct {
 	Amount              float64
 	AccountNumber       string
 	PhoneNumber         string
+	Initiator           string
+	InitiatorPassword   string
+	TransactionReference string
+	IdentifierType      string
+	TransQueryResultURL string
+	TransQueryRemarks   string
+	TransQueryOccassion string
+	TransQueryCommandID string
+	TransQueryQueueTimeOutURL     string
+	TransQueryOriginatorConversationID  string
 	StkPushData         StkPushData
+	TransQueryTable TransQueryTable
 }
 
 type StkPushData struct {
@@ -33,6 +44,23 @@ type StkPushData struct {
 	ReferenceNumber string
 }
 
+type TransQueryTableColumns struct {
+	OriginatorConversationID   string
+	ConversationID   string
+	ResponseCode        string
+	ResponseDescription string
+	TransactionReference string
+	Status string
+	AccountReference string
+}
+
+type TransQueryTable struct{
+	TableName string
+	Columns TransQueryTableColumns
+	DbConnection        *sql.DB
+
+}
+
 type TokenFeedback struct {
 	AccessToken   string
 	Error         string
@@ -41,6 +69,12 @@ type TokenFeedback struct {
 }
 
 type StkPushFeedback struct {
+	Error         string
+	Success       bool
+	MpesaResponse map[string]string
+}
+
+type TransactionQueryFeedback struct {
 	Error         string
 	Success       bool
 	MpesaResponse map[string]string

@@ -1,4 +1,4 @@
-package main
+package mpesa
 
 import (
 	"database/sql"
@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/gorilla/mux"
 )
@@ -26,9 +25,53 @@ func Connect() (db *sql.DB) {
 	return db
 }
 
-func main() {
+func TestTransQuery(){
+	config := Config{}
+	config.MpesaConsumerKey = "kAPfIJxLk0Ieas12QLsANwXPHmbvNCwn"
+	config.MpesaConsumerSecret = "23KqoLyCB3OHVvAI"
+	config.AccountNumber = "12345"
+	config.MpesaShortCode ="174379"
+	config.Initiator = "testapi"
+	config.InitiatorPassword = "Safaricom999!*!"
+	config.TransactionReference = "OEI2AK4Q16"
+	config.TransQueryOriginatorConversationID = RandomString(10)
+	config.TransQueryRemarks ="Query "+ config.TransactionReference
+	config.IdentifierType = "4"
+	config.TransQueryCommandID = "TransactionStatusQuery"
+	config.TransQueryResultURL ="https://e0d2-197-156-137-141.ngrok-free.app/payment/transaction-query"
+	config.TransQueryQueueTimeOutURL ="https://e0d2-197-156-137-141.ngrok-free.app/payment/transaction-query"
+	config.Env = 0
 
-	log.Println(EncryptWithPublicKey("koros",1,"koros"))
+	//optional
+	transQueryTable := TransQueryTable{}
+
+	transQueryTableColumns := TransQueryTableColumns{}
+
+	transQueryTableColumns.AccountReference = "account_reference"
+	transQueryTableColumns.ConversationID ="ConversationID"
+	transQueryTableColumns.OriginatorConversationID = "OriginatorConversationID"
+	transQueryTableColumns.ResponseCode = "ResponseCode"
+	transQueryTableColumns.ResponseDescription ="ResponseDescription"
+	transQueryTableColumns.Status = "status"
+	transQueryTableColumns.TransactionReference = "mpesa_code_entered"
+	transQueryTableColumns.AccountReference = "account_reference"
+
+	transQueryTable.Columns = transQueryTableColumns
+	transQueryTable.TableName ="transaction_query_requests"
+	transQueryTable.DbConnection = Connect()
+
+	config.TransQueryTable = transQueryTable
+
+	feedback :=TransactionQuery(config)
+
+	out, err := json.Marshal(feedback)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println(string(out))
+}
+
+func main() {
 
 	router := mux.NewRouter()
 	
@@ -39,9 +82,9 @@ func main() {
 	config.MpesaCallbackUrl = "https://e515-197-156-137-142.ngrok-free.app/stk/callback"
 	config.MpesaShortCode ="174379"
 	config.PhoneNumber ="254713887070"
-	config.Env =0
+	config.Env = 0
 	config.AccountNumber = "12345"
-	config.Amount =2
+	config.Amount = 2
 	config.MpesaPassKey ="bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919"
 
 	stk := StkPushData{}
@@ -90,13 +133,7 @@ func main() {
 
 	//feedback := StkPush(config)
 
-	feedback :=TokenFeedback{}
-
-	out, err := json.Marshal(feedback)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(string(out))
+	TestTransQuery();
 
 	http.Handle("/", router)
 	fmt.Println("Connected to port 10000")
