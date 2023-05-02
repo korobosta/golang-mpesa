@@ -7,7 +7,7 @@ import (
 	"log"
 	"net/http"
 	_ "github.com/go-sql-driver/mysql"
-	"github.com/gorilla/mux"
+	"github.com/gorilla/mux" 
 )
 
 func Connect() (db *sql.DB) {
