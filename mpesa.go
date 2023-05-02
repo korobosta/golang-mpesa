@@ -1,4 +1,4 @@
-package golang_mpesa
+package mpesa
 
 import (
 	"bytes"
