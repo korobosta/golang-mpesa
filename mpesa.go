@@ -171,12 +171,12 @@ func StkPush(config Config) StkPushFeedback{
 										stkData.Amount = fmt.Sprintf("%f", config.Amount)
 										SaveStkPushData(stkData,config.StkPushData)
 									}
+								}
+							}else{
+								if errorMessage, ok := m["errorMessage"]; ok {
+									errors = errorMessage
 								}else{
-									if errorMessage, ok := m["errorMessage"]; ok {
-										errors = errorMessage
-									}else{
-										errors ="Unknown error occured"
-									}
+									errors ="Unknown error occured"
 								}
 							}
 						}
