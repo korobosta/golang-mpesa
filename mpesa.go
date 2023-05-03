@@ -326,6 +326,8 @@ func GetTransactionQueryResponse(table PaymentTable,transQueryTable TransQueryTa
 
 	transactionQueryCallbackFeedback := TransactionStatusResponse{}
 
+	var originatorConversationID string = ""
+
 	payment :=Payment{}
 
 	
@@ -340,17 +342,22 @@ func GetTransactionQueryResponse(table PaymentTable,transQueryTable TransQueryTa
 		if err != nil {
 			errors = err.Error()
 		}else{
-			payment = DecodeTransactionQueryCallbackResponse(b)
-			var  requestExists bool = UpdateTransQueryTable(transQueryTable)
+			payment,originatorConversationID = DecodeTransactionQueryCallbackResponse(b)
+			
 			emptyPayment := Payment{};
-			if(payment != emptyPayment && requestExists == true){
-				columns := table.Columns.TransactionType+","+table.Columns.TransID+","+table.Columns.TransTime+","+table.Columns.TransAmount+","+table.Columns.BusinessShortCode+","+table.Columns.BillRefNumber+","+table.Columns.InvoiceNumber+","+table.Columns.OrgAccountBalance+","+table.Columns.ThirdPartyTransID+","+table.Columns.MSISDN+","+table.Columns.FirstName+","+table.Columns.MiddleName+","+table.Columns.LastName
-				log.Println(columns)
-				save, err := table.DbConnection.Prepare("INSERT INTO "+table.TableName+"("+columns+") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)")
-				if err != nil {
-					log.Println(err)
+			if(payment != emptyPayment){
+				var  accountNumber string = UpdateTransQueryTable(transQueryTable,originatorConversationID)
+				if accountNumber != ""{
+					payment.BillRefNumber = accountNumber
+					columns := table.Columns.TransactionType+","+table.Columns.TransID+","+table.Columns.TransTime+","+table.Columns.TransAmount+","+table.Columns.BusinessShortCode+","+table.Columns.BillRefNumber+","+table.Columns.InvoiceNumber+","+table.Columns.OrgAccountBalance+","+table.Columns.ThirdPartyTransID+","+table.Columns.MSISDN+","+table.Columns.FirstName+","+table.Columns.MiddleName+","+table.Columns.LastName
+					log.Println(columns)
+					save, err := table.DbConnection.Prepare("INSERT INTO "+table.TableName+"("+columns+") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)")
+					if err != nil {
+						log.Println(err)
+					}
+					save.Exec(payment.TransactionType,payment.TransID,payment.TransTime,payment.TransAmount,payment.BusinessShortCode,payment.BillRefNumber,payment.InvoiceNumber,payment.OrgAccountBalance,payment.ThirdPartyTransID,payment.MSISDN,payment.FirstName,payment.MiddleName,payment.LastName)
 				}
-				save.Exec(payment.TransactionType,payment.TransID,payment.TransTime,payment.TransAmount,payment.BusinessShortCode,payment.BillRefNumber,payment.InvoiceNumber,payment.OrgAccountBalance,payment.ThirdPartyTransID,payment.MSISDN,payment.FirstName,payment.MiddleName,payment.LastName)
+				
 			}
 		}
 		
@@ -367,9 +374,11 @@ func GetTransactionQueryResponse(table PaymentTable,transQueryTable TransQueryTa
 
 }
 
-func DecodeTransactionQueryCallbackResponse (b []byte) Payment{
+func DecodeTransactionQueryCallbackResponse (b []byte) (Payment,string){
 
 	payment := Payment{}
+
+	var originatorConversationID string = ""
 
 	transactionQueryCallbackResponse := TransactionStatusResponse{}
 
@@ -383,6 +392,8 @@ func DecodeTransactionQueryCallbackResponse (b []byte) Payment{
 			log.Println(paybill)
 			arrPaybill := strings.Split(paybill, "-")
 			businessShortCode := arrPaybill[0]
+
+			originatorConversationID = transactionQueryCallbackResponse.Result.OriginatorConversationID
 
 			customer := transactionQueryCallbackResponse.Result.ResultParameters.ResultParameter[1].Value.(string)
 			arrCustomer := strings.Split(customer, "-")
@@ -403,7 +414,7 @@ func DecodeTransactionQueryCallbackResponse (b []byte) Payment{
 		}
 	}
 
-	return payment
+	return payment,originatorConversationID
 }
 
 func TransactionQuery(config Config) TransactionQueryFeedback{
@@ -519,20 +530,28 @@ func SaveTransQueryData(data TransQueryTableColumns,db TransQueryTable){
 }
 
 
-func UpdateTransQueryTable(transQueryTable TransQueryTable) bool{
-	var success bool= false
-	updateOrder, err := transQueryTable.DbConnection.Prepare("UPDATE "+transQueryTable.TableName+" SET status = ?,"+transQueryTable.SuccessMpesaStatus+"=? where "+transQueryTable.Columns.OriginatorConversationID+"=?")
-	if err != nil {
-		log.Println(err)
-	}else{
-		_,err = updateOrder.Exec(transQueryTable.SuccessMpesaStatus, transQueryTable.Columns.OriginatorConversationID)
+func UpdateTransQueryTable(transQueryTable TransQueryTable, originatorConversationID string) string{
+	var accountNumber string= GetTransactionQueryAccountNumber(transQueryTable, originatorConversationID)
+	if(accountNumber == ""){
+		updateOrder, err := transQueryTable.DbConnection.Prepare("UPDATE "+transQueryTable.TableName+" SET status = ?,"+transQueryTable.SuccessMpesaStatus+"=? where "+transQueryTable.Columns.OriginatorConversationID+"=?")
 		if err != nil {
 			log.Println(err)
 		}else{
-			success = true
+			_,err = updateOrder.Exec(transQueryTable.SuccessMpesaStatus,originatorConversationID)
+			if err != nil {
+				log.Println(err)
+			}
 		}
 	}
+	return accountNumber
+}
 
-	return success
+func GetTransactionQueryAccountNumber(table TransQueryTable, originatorConversationID string) string{
+	var accountNumber string = ""
+	err := table.DbConnection.QueryRow("select "+table.Columns.AccountReference+" from "+table.TableName+" where "+table.Columns.OriginatorConversationID+" = ?", originatorConversationID).Scan(&accountNumber)
+	if err != nil {
+		log.Println(err)
+	}
+	return accountNumber
 }
 		
