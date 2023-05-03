@@ -4,14 +4,16 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"embed"
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
 	"log"
 	randString "math/rand"
-	"os"
 	"time"
 )
+
+var cert embed.FS
 
 func RandomString(length int) string {
     randString.Seed(time.Now().UnixNano())
@@ -29,7 +31,7 @@ func EncryptWithPublicKey( password string,env int) string {
 		f = "./SandboxCertificate.cer"
 	}
 
-	publicKey, err := os.ReadFile(f)
+	publicKey, err := cert.ReadFile(f)
 	if err != nil {
 		log.Println(err)
 	}
