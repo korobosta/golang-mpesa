@@ -229,6 +229,8 @@ func GetStkPushResponse(config Config) http.Handler {
 			//stkData := FormatedStkCallback{};
 			if(formatedStkCallback.MpesaReceiptNumber != nil){
 				success = true
+			}else{
+				errors = "Some fields are missing"
 			}
 		}
 		
