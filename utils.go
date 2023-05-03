@@ -7,9 +7,9 @@ import (
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
-	"io/ioutil"
 	"log"
 	randString "math/rand"
+	"os"
 	"time"
 )
 
@@ -29,7 +29,7 @@ func EncryptWithPublicKey( password string,env int) string {
 		f = "./SandboxCertificate.cer"
 	}
 
-	publicKey, err := ioutil.ReadFile(f)
+	publicKey, err := os.ReadFile(f)
 	if err != nil {
 		log.Println(err)
 	}
