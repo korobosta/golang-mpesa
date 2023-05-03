@@ -226,8 +226,8 @@ func GetStkPushResponse(config Config) http.Handler {
 			errors = err.Error()
 		}else{
 			formatedStkCallback = DecodeStkCallbackResponse(b)
-			stkData := FormatedStkCallback{};
-			if(formatedStkCallback != stkData){
+			//stkData := FormatedStkCallback{};
+			if(formatedStkCallback.MpesaReceiptNumber != nil){
 				success = true
 			}
 		}
