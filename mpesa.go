@@ -160,7 +160,7 @@ func StkPush(config Config) StkPushFeedback{
 									success = true
 									stkData := StkPushData{};
 									if(config.StkPushData != stkData){
-										stkData.Status ="0"
+										stkData.Status =config.StkPushData.DefaultStatus
 										stkData.CheckoutRequestID =m["CheckoutRequestID"]
 										stkData.CustomerMessage = m["CustomerMessage"]
 										stkData.MerchantRequestID = m["MerchantRequestID"]
@@ -239,7 +239,7 @@ func GetStkPushResponse(config Config) http.Handler {
 		if err != nil {
 			log.Println(err)
 		}
-		updateOrder.Exec(1, formatedStkCallback.MpesaReceiptNumber,formatedStkCallback.MerchantRequestID)
+		updateOrder.Exec(config.StkPushData.SuccessMpesaStatus, formatedStkCallback.MpesaReceiptNumber,formatedStkCallback.MerchantRequestID)
 	}
 	stkCallbackFeedback.Error =errors
 	stkCallbackFeedback.MpesaResponse = m
@@ -320,7 +320,7 @@ func SaveMpesaPaymentConfirmation(table PaymentTable) http.Handler {
 
 }
 
-func GetTransactionQueryResponse(table PaymentTable) http.Handler {
+func GetTransactionQueryResponse(table PaymentTable,transQueryTable TransQueryTable) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	var errors string = ""
 
@@ -341,15 +341,16 @@ func GetTransactionQueryResponse(table PaymentTable) http.Handler {
 			errors = err.Error()
 		}else{
 			payment = DecodeTransactionQueryCallbackResponse(b)
+			var  requestExists bool = UpdateTransQueryTable(transQueryTable)
 			emptyPayment := Payment{};
-			if(payment != emptyPayment){
+			if(payment != emptyPayment && requestExists == true){
 				columns := table.Columns.TransactionType+","+table.Columns.TransID+","+table.Columns.TransTime+","+table.Columns.TransAmount+","+table.Columns.BusinessShortCode+","+table.Columns.BillRefNumber+","+table.Columns.InvoiceNumber+","+table.Columns.OrgAccountBalance+","+table.Columns.ThirdPartyTransID+","+table.Columns.MSISDN+","+table.Columns.FirstName+","+table.Columns.MiddleName+","+table.Columns.LastName
-			log.Println(columns)
-			save, err := table.DbConnection.Prepare("INSERT INTO "+table.TableName+"("+columns+") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)")
-			if err != nil {
-				log.Println(err)
-			}
-			save.Exec(payment.TransactionType,payment.TransID,payment.TransTime,payment.TransAmount,payment.BusinessShortCode,payment.BillRefNumber,payment.InvoiceNumber,payment.OrgAccountBalance,payment.ThirdPartyTransID,payment.MSISDN,payment.FirstName,payment.MiddleName,payment.LastName)
+				log.Println(columns)
+				save, err := table.DbConnection.Prepare("INSERT INTO "+table.TableName+"("+columns+") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)")
+				if err != nil {
+					log.Println(err)
+				}
+				save.Exec(payment.TransactionType,payment.TransID,payment.TransTime,payment.TransAmount,payment.BusinessShortCode,payment.BillRefNumber,payment.InvoiceNumber,payment.OrgAccountBalance,payment.ThirdPartyTransID,payment.MSISDN,payment.FirstName,payment.MiddleName,payment.LastName)
 			}
 		}
 		
@@ -478,7 +479,7 @@ func TransactionQuery(config Config) TransactionQueryFeedback{
 									transQueryTable := TransQueryTable{};
 									if(config.TransQueryTable != transQueryTable){
 										transQueryData := TransQueryTableColumns{}
-										transQueryData.Status ="0"
+										transQueryData.Status =config.TransQueryTable.DefaultStatus
 										transQueryData.ResponseDescription =m["ResponseDescription"]
 										transQueryData.ConversationID = m["ConversationID"]
 										transQueryData.OriginatorConversationID = m["OriginatorConversationID"]
@@ -517,4 +518,21 @@ func SaveTransQueryData(data TransQueryTableColumns,db TransQueryTable){
 	save.Exec(data.ConversationID, data.OriginatorConversationID, data.ResponseCode, data.AccountReference,data.ResponseDescription,data.Status,data.TransactionReference)
 }
 
+
+func UpdateTransQueryTable(transQueryTable TransQueryTable) bool{
+	var success bool= false
+	updateOrder, err := transQueryTable.DbConnection.Prepare("UPDATE "+transQueryTable.TableName+" SET status = ?,"+transQueryTable.SuccessMpesaStatus+"=? where "+transQueryTable.Columns.OriginatorConversationID+"=?")
+	if err != nil {
+		log.Println(err)
+	}else{
+		_,err = updateOrder.Exec(transQueryTable.SuccessMpesaStatus, transQueryTable.Columns.OriginatorConversationID)
+		if err != nil {
+			log.Println(err)
+		}else{
+			success = true
+		}
+	}
+
+	return success
+}
 		

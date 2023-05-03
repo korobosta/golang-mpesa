@@ -126,7 +126,7 @@ func main() {
 
 	router.Handle("/stk/callback", GetStkPushResponse(config)).Methods("POST","OPTIONS")
 	router.Handle("/payment/confirmation", SaveMpesaPaymentConfirmation(paymentTable)).Methods("POST","OPTIONS")
-	router.Handle("/payment/transaction-query", GetTransactionQueryResponse(paymentTable)).Methods("POST","OPTIONS")
+	router.Handle("/payment/transaction-query", GetTransactionQueryResponse(paymentTable,config.TransQueryTable)).Methods("POST","OPTIONS")
 
 
 	//feedback := GenerateMpesaToken(config)

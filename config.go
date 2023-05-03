@@ -42,6 +42,8 @@ type StkPushData struct {
 	AccountNumber string
 	Amount string
 	ReferenceNumber string
+	DefaultStatus string
+	SuccessMpesaStatus string
 }
 
 type TransQueryTableColumns struct {
@@ -58,6 +60,8 @@ type TransQueryTable struct{
 	TableName string
 	Columns TransQueryTableColumns
 	DbConnection        *sql.DB
+	DefaultStatus string
+	SuccessMpesaStatus string
 
 }
 
