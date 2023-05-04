@@ -115,7 +115,7 @@ func EncryptWithPublicKey( password string,env int) string {
 	// 	log.Println(err)
 	// }
 
-	block, _ := pem.Decode([]byte (f))
+	block, _ := pem.Decode([]byte(f))
 
 	var cert *x509.Certificate
 	cert, err := x509.ParseCertificate(block.Bytes)
