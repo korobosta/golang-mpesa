@@ -282,7 +282,7 @@ func DecodeStkCallbackResponse (b []byte) FormatedStkCallback{
     
 }
 
-func SaveMpesaPaymentConfirmation(table PaymentTable) http.Handler {
+func SaveMpesaPaymentConfirmation(table PaymentTable,config Config) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
 	var errors string = ""
@@ -300,13 +300,7 @@ func SaveMpesaPaymentConfirmation(table PaymentTable) http.Handler {
 		if err != nil {
 			errors = err.Error()
 		}else{
-			columns := table.Columns.TransactionType+","+table.Columns.TransID+","+table.Columns.TransTime+","+table.Columns.TransAmount+","+table.Columns.BusinessShortCode+","+table.Columns.BillRefNumber+","+table.Columns.InvoiceNumber+","+table.Columns.OrgAccountBalance+","+table.Columns.ThirdPartyTransID+","+table.Columns.MSISDN+","+table.Columns.FirstName+","+table.Columns.MiddleName+","+table.Columns.LastName
-			log.Println(columns)
-			save, err := table.DbConnection.Prepare("INSERT INTO "+table.TableName+"("+columns+") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)")
-			if err != nil {
-				log.Println(err)
-			}
-			save.Exec(payment.TransactionType,payment.TransID,payment.TransTime,payment.TransAmount,payment.BusinessShortCode,payment.BillRefNumber,payment.InvoiceNumber,payment.OrgAccountBalance,payment.ThirdPartyTransID,payment.MSISDN,payment.FirstName,payment.MiddleName,payment.LastName)
+			SaveMpesaPayment(table,payment,config);
 		}
 		
     }
@@ -322,7 +316,7 @@ func SaveMpesaPaymentConfirmation(table PaymentTable) http.Handler {
 
 }
 
-func GetTransactionQueryResponse(table PaymentTable,transQueryTable TransQueryTable) http.Handler {
+func GetTransactionQueryResponse(table PaymentTable,transQueryTable TransQueryTable, config Config) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 	var errors string = ""
 
@@ -352,13 +346,7 @@ func GetTransactionQueryResponse(table PaymentTable,transQueryTable TransQueryTa
 				var  accountNumber string = UpdateTransQueryTable(transQueryTable,originatorConversationID)
 				if accountNumber != ""{
 					payment.BillRefNumber = accountNumber
-					columns := table.Columns.TransactionType+","+table.Columns.TransID+","+table.Columns.TransTime+","+table.Columns.TransAmount+","+table.Columns.BusinessShortCode+","+table.Columns.BillRefNumber+","+table.Columns.InvoiceNumber+","+table.Columns.OrgAccountBalance+","+table.Columns.ThirdPartyTransID+","+table.Columns.MSISDN+","+table.Columns.FirstName+","+table.Columns.MiddleName+","+table.Columns.LastName
-					log.Println(columns)
-					save, err := table.DbConnection.Prepare("INSERT INTO "+table.TableName+"("+columns+") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)")
-					if err != nil {
-						log.Println(err)
-					}
-					save.Exec(payment.TransactionType,payment.TransID,payment.TransTime,payment.TransAmount,payment.BusinessShortCode,payment.BillRefNumber,payment.InvoiceNumber,payment.OrgAccountBalance,payment.ThirdPartyTransID,payment.MSISDN,payment.FirstName,payment.MiddleName,payment.LastName)
+					SaveMpesaPayment(table,payment,config);
 				}
 				
 			}
@@ -556,5 +544,20 @@ func GetTransactionQueryAccountNumber(table TransQueryTable, originatorConversat
 		log.Println(err)
 	}
 	return accountNumber
+}
+
+func SaveMpesaPayment(table PaymentTable, payment Payment,config Config){
+	columns := table.Columns.TransactionType+","+table.Columns.TransID+","+table.Columns.TransTime+","+table.Columns.TransAmount+","+table.Columns.BusinessShortCode+","+table.Columns.BillRefNumber+","+table.Columns.InvoiceNumber+","+table.Columns.OrgAccountBalance+","+table.Columns.ThirdPartyTransID+","+table.Columns.MSISDN+","+table.Columns.FirstName+","+table.Columns.MiddleName+","+table.Columns.LastName
+	log.Println(columns)
+	save, err := table.DbConnection.Prepare("INSERT INTO "+table.TableName+"("+columns+") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)")
+	if err != nil {
+		log.Println(err)
+	}
+	_, err = save.Exec(payment.TransactionType,payment.TransID,payment.TransTime,payment.TransAmount,payment.BusinessShortCode,payment.BillRefNumber,payment.InvoiceNumber,payment.OrgAccountBalance,payment.ThirdPartyTransID,payment.MSISDN,payment.FirstName,payment.MiddleName,payment.LastName)
+	if err == nil{
+		if config.AfterPaymentFunction != nil{
+			config.AfterPaymentFunction(payment)
+		}
+	}
 }
 		

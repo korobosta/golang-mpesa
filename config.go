@@ -2,6 +2,8 @@ package mpesa
 
 import "database/sql"
 
+type AfterPaymentFunction func(Payment) 
+
 type Config struct {
 	Id                  int
 	MpesaShortCode      string
@@ -27,6 +29,7 @@ type Config struct {
 	TransQueryOriginatorConversationID  string
 	StkPushData         StkPushData
 	TransQueryTable TransQueryTable
+	AfterPaymentFunction AfterPaymentFunction
 }
 
 type StkPushData struct {
