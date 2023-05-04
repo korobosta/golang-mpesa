@@ -26,9 +26,9 @@ func EncryptWithPublicKey( password string,env int) string {
 	//byteMessage := []byte(message)
 	var f = ""
 	if env == 1{
-		f = "./mpesa_public_keys/ProductionCertificate.cer"
+		f = "./ProductionCertificate.cer"
 	}else{
-		f = "./mpesa_public_keys/SandboxCertificate.cer"
+		f = "./SandboxCertificate.cer"
 	}
 
 	publicKey, err := cert.ReadFile(f)
