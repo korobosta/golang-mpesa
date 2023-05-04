@@ -344,6 +344,7 @@ func GetTransactionQueryResponse(table PaymentTable,transQueryTable TransQueryTa
 		if err != nil {
 			errors = err.Error()
 		}else{
+			log.Println(transactionQueryCallbackFeedback)
 			payment,originatorConversationID = DecodeTransactionQueryCallbackResponse(b)
 			
 			emptyPayment := Payment{};
