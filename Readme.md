@@ -113,7 +113,19 @@ func MpesaConfig() mpesa.Config {
 
 	config.TransQueryTable = transQueryTable
 
+	//If you would like the package to call your api after a successfull payment , configure as shown below:
+	//The function should accept payment struct argument with all the details about the payment
+	config.AfterPaymentFunction = MyAfterPaymentFunction
+
 	return config
+}
+
+//How your after payment transaction should look like 
+
+func MyAfterPaymentFunction(payment mpesa.Payment){
+
+	//log.Println(payment)
+
 }
 
 // A function for configuring your MPESA payments table
@@ -215,9 +227,8 @@ func main() {
 
 	paymentTable := MpesaPaymentTable()
 	router.Handle("/payment/confirmation", mpesa.SaveMpesaPaymentConfirmation(paymentTable,config)).Methods("POST","OPTIONS")
-	
-	
 
+	//After Payment Function 
 	
 }
 
@@ -225,5 +236,5 @@ func main() {
 
 ## Todo list
 - Connection to other databases that are not sql
-- More updates to give more controll to the database
+- More updates to give more controll to the developer
 - Any suggestion you make through ***kevinkorobosta@gmail.com***

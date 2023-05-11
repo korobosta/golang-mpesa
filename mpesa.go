@@ -242,6 +242,9 @@ func GetStkPushResponse(config Config) http.Handler {
 			log.Println(err)
 		}
 		updateOrder.Exec(config.StkPushData.SuccessMpesaStatus, formatedStkCallback.MpesaReceiptNumber,formatedStkCallback.MerchantRequestID)
+		if config.SuccessStkCallBackFunction != nil{
+			config.SuccessStkCallBackFunction(formatedStkCallback)
+		}
 	}
 	stkCallbackFeedback.Error =errors
 	stkCallbackFeedback.MpesaResponse = m
@@ -548,7 +551,6 @@ func GetTransactionQueryAccountNumber(table TransQueryTable, originatorConversat
 
 func SaveMpesaPayment(table PaymentTable, payment Payment,config Config){
 	columns := table.Columns.TransactionType+","+table.Columns.TransID+","+table.Columns.TransTime+","+table.Columns.TransAmount+","+table.Columns.BusinessShortCode+","+table.Columns.BillRefNumber+","+table.Columns.InvoiceNumber+","+table.Columns.OrgAccountBalance+","+table.Columns.ThirdPartyTransID+","+table.Columns.MSISDN+","+table.Columns.FirstName+","+table.Columns.MiddleName+","+table.Columns.LastName
-	log.Println(columns)
 	save, err := table.DbConnection.Prepare("INSERT INTO "+table.TableName+"("+columns+") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)")
 	if err != nil {
 		log.Println(err)

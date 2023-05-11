@@ -3,6 +3,7 @@ package mpesa
 import "database/sql"
 
 type AfterPaymentFunction func(Payment) 
+type SuccessStkCallBackFunction func(FormatedStkCallback)
 
 type Config struct {
 	Id                  int
@@ -30,6 +31,7 @@ type Config struct {
 	StkPushData         StkPushData
 	TransQueryTable TransQueryTable
 	AfterPaymentFunction AfterPaymentFunction
+	SuccessStkCallBackFunction SuccessStkCallBackFunction
 }
 
 type StkPushData struct {
