@@ -560,6 +560,8 @@ func SaveMpesaPayment(table PaymentTable, payment Payment,config Config){
 		if config.AfterPaymentFunction != nil{
 			config.AfterPaymentFunction(payment)
 		}
+	}else{
+		log.Println(err)
 	}
 }
 		
