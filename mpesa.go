@@ -13,13 +13,12 @@ import (
 	"time"
 )
 
-
-var TEST_MPESA_TOKEN_URL string ="https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
-var TEST_MPESA_STK_PUSH_URL ="https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
+var TEST_MPESA_TOKEN_URL string = "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
+var TEST_MPESA_STK_PUSH_URL = "https://sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
 var TEST_MPESA_TRANSACTION_QUERY_URL = "https://sandbox.safaricom.co.ke/mpesa/transactionstatus/v1/query"
 
-var LIVE_MPESA_TOKEN_URL ="https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
-var LIVE_MPESA_STK_PUSH_URL ="https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
+var LIVE_MPESA_TOKEN_URL = "https://api.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials"
+var LIVE_MPESA_STK_PUSH_URL = "https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest"
 var LIVE_MPESA_TRANSACTION_QUERY_URL = "https://api.safaricom.co.ke/mpesa/transactionstatus/v1/query"
 
 func GenerateMpesaToken(config Config) TokenFeedback {
@@ -31,39 +30,39 @@ func GenerateMpesaToken(config Config) TokenFeedback {
 	feedback := TokenFeedback{}
 
 	var url string = config.MpesaTokenUrl
-	if(url == ""){
+	if url == "" {
 		if config.Env == 1 {
 			url = LIVE_MPESA_TOKEN_URL
 		} else {
 			url = TEST_MPESA_TOKEN_URL
 		}
 	}
-	
+
 	method := "GET"
 	client := &http.Client{}
 	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		errors = err.Error()
-	}else{
+	} else {
 
 		req.Header.Add("Content-Type", "application/json")
 
 		req.SetBasicAuth(config.MpesaConsumerKey, config.MpesaConsumerSecret)
 
 		res, err := client.Do(req)
-		if err != nil{
+		if err != nil {
 			errors = err.Error()
-		}else{
+		} else {
 			defer res.Body.Close()
 			body, err := ioutil.ReadAll(res.Body)
 
-			if err != nil{
+			if err != nil {
 				errors = err.Error()
-			}else{
+			} else {
 				err = json.Unmarshal(body, &m)
-				if err != nil{
+				if err != nil {
 					errors = err.Error()
-				}else{
+				} else {
 
 					if token, ok := m["access_token"]; ok {
 						accessToken = token
@@ -76,15 +75,15 @@ func GenerateMpesaToken(config Config) TokenFeedback {
 			}
 		}
 	}
-	feedback.AccessToken=accessToken
-	feedback.Error =errors
+	feedback.AccessToken = accessToken
+	feedback.Error = errors
 	feedback.Success = success
 	feedback.MpesaResponse = m
 
 	return feedback
 }
 
-func StkPush(config Config) StkPushFeedback{
+func StkPush(config Config) StkPushFeedback {
 
 	var errors string = ""
 	var accessToken string = ""
@@ -96,87 +95,86 @@ func StkPush(config Config) StkPushFeedback{
 
 	tokenFeedback = GenerateMpesaToken(config)
 
-	if tokenFeedback.Success == false{
+	if tokenFeedback.Success == false {
 		errors = tokenFeedback.Error
-	}else{
-		accessToken =tokenFeedback.AccessToken
-		var url string =""
-		if config.MpesaStkPushUrl==""{
-			if config.Env  == 1{
+	} else {
+		accessToken = tokenFeedback.AccessToken
+		var url string = ""
+		if config.MpesaStkPushUrl == "" {
+			if config.Env == 1 {
 				url = LIVE_MPESA_STK_PUSH_URL
-			}else{
+			} else {
 				url = TEST_MPESA_STK_PUSH_URL
 			}
 		}
-		
+
 		method := "POST"
 
 		timestamp := time.Now().Format("20060102150405")
 
-		password := base64.StdEncoding.EncodeToString([]byte(config.MpesaShortCode+config.MpesaPassKey+timestamp))
-	
+		password := base64.StdEncoding.EncodeToString([]byte(config.MpesaShortCode + config.MpesaPassKey + timestamp))
+
 		payload := map[string]any{
 			"BusinessShortCode": config.MpesaShortCode,
-			"Password": password ,
-			"Timestamp": timestamp,
-			"TransactionType": "CustomerPayBillOnline",
-			"Amount": config.Amount,
-			"PartyA": config.PhoneNumber,
-			"PartyB": config.MpesaShortCode,
-			"PhoneNumber": config.PhoneNumber,
-			"CallBackURL": config.MpesaCallbackUrl,
-			"AccountReference": config.AccountNumber,
-			"TransactionDesc": "Payment for "+config.AccountNumber,
+			"Password":          password,
+			"Timestamp":         timestamp,
+			"TransactionType":   "CustomerPayBillOnline",
+			"Amount":            config.Amount,
+			"PartyA":            config.PhoneNumber,
+			"PartyB":            config.MpesaShortCode,
+			"PhoneNumber":       config.PhoneNumber,
+			"CallBackURL":       config.MpesaCallbackUrl,
+			"AccountReference":  config.AccountNumber,
+			"TransactionDesc":   "Payment for " + config.AccountNumber,
 		}
-	
+
 		jsonPayload, err := json.Marshal(payload)
 
 		if err != nil {
-			errors =err.Error()
-		}else{
-			client := &http.Client {
-				}
+			errors = err.Error()
+		} else {
+			client := &http.Client{}
 			req, err := http.NewRequest(method, url, bytes.NewBuffer(jsonPayload))
 			if err != nil {
 				errors = err.Error()
-			}else{
+			} else {
 				req.Header.Add("Content-Type", "application/json")
 				req.Header.Add("Authorization", "Bearer "+accessToken)
 				res, err := client.Do(req)
 				if err != nil {
 					errors = err.Error()
-				}else{
+				} else {
 					defer res.Body.Close()
-		            body, err := ioutil.ReadAll(res.Body)
+					body, err := ioutil.ReadAll(res.Body)
 					if err != nil {
 						errors = err.Error()
-					}else{
+					} else {
 						err = json.Unmarshal(body, &m)
 						if err != nil {
 							errors = err.Error()
-						}else{
+						} else {
 							if responseCode, ok := m["ResponseCode"]; ok {
-								if responseCode == "0"{
+								if responseCode == "0" {
 									success = true
-									stkData := StkPushData{};
-									if(config.StkPushData != stkData){
-										stkData.Status =config.StkPushData.DefaultStatus
-										stkData.CheckoutRequestID =m["CheckoutRequestID"]
+									stkData := StkPushData{}
+									if config.StkPushData != stkData {
+										stkData.Status = config.StkPushData.DefaultStatus
+										stkData.CheckoutRequestID = m["CheckoutRequestID"]
 										stkData.CustomerMessage = m["CustomerMessage"]
 										stkData.MerchantRequestID = m["MerchantRequestID"]
 										stkData.ResponseCode = m["ResponseCode"]
-										stkData.ResponseDescription= m["ResponseDescription"]
-										stkData.PhoneNumber =config.PhoneNumber
-										stkData.AccountNumber =config.AccountNumber
+										stkData.ResponseDescription = m["ResponseDescription"]
+										stkData.PhoneNumber = config.PhoneNumber
+										stkData.AccountNumber = config.AccountNumber
 										stkData.Amount = fmt.Sprintf("%f", config.Amount)
-										SaveStkPushData(stkData,config.StkPushData)
+										SaveStkPushData(stkData, config.StkPushData)
 									}
 								}
-							}else{
+							} else {
 								if errorMessage, ok := m["errorMessage"]; ok {
 									errors = errorMessage
-								}else{
-									errors ="Unknown error occured"
+								} else {
+									errors = "Unknown error occured"
 								}
 							}
 						}
@@ -188,80 +186,79 @@ func StkPush(config Config) StkPushFeedback{
 	}
 
 	stkPushFeedback.Error = errors
-	stkPushFeedback.MpesaResponse =m
+	stkPushFeedback.MpesaResponse = m
 	stkPushFeedback.Success = success
-	
+
 	return stkPushFeedback
 }
 
-func SaveStkPushData(data StkPushData,db StkPushData){
-	save, err := db.DbConnection.Prepare("INSERT INTO "+db.TableName+"("+db.MerchantRequestID+","+db.CheckoutRequestID+","+db.ResponseCode+","+db.ResponseDescription+","+db.CustomerMessage+","+db.Status+","+db.PhoneNumber+","+db.AccountNumber+","+db.Amount+") VALUES(?,?,?,?,?,?,?,?,?)")
+func SaveStkPushData(data StkPushData, db StkPushData) {
+	save, err := db.DbConnection.Prepare("INSERT INTO " + db.TableName + "(" + db.MerchantRequestID + "," + db.CheckoutRequestID + "," + db.ResponseCode + "," + db.ResponseDescription + "," + db.CustomerMessage + "," + db.Status + "," + db.PhoneNumber + "," + db.AccountNumber + "," + db.Amount + ") VALUES(?,?,?,?,?,?,?,?,?)")
 	if err != nil {
 		log.Println(err)
 	}
-	save.Exec(data.MerchantRequestID, data.CheckoutRequestID, data.ResponseCode, data.ResponseDescription,data.CustomerMessage,data.Status,data.PhoneNumber,data.AccountNumber,data.Amount)
+	save.Exec(data.MerchantRequestID, data.CheckoutRequestID, data.ResponseCode, data.ResponseDescription, data.CustomerMessage, data.Status, data.PhoneNumber, data.AccountNumber, data.Amount)
 }
 
 func GetStkPushResponse(config Config) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	var errors string = ""
-	var success bool = false
+		var errors string = ""
+		var success bool = false
 
-	m := make(map[string]any)
+		m := make(map[string]any)
 
-	stkCallbackFeedback := StkCallbackFeedback{}
+		stkCallbackFeedback := StkCallbackFeedback{}
 
-	formatedStkCallback :=FormatedStkCallback{}
+		formatedStkCallback := FormatedStkCallback{}
 
-	
-	b, err := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
-	if err != nil {
-		errors =err.Error()
-	}
-
-	if(errors == ""){
-		err = json.Unmarshal(b, &m)
+		b, err := ioutil.ReadAll(r.Body)
+		defer r.Body.Close()
 		if err != nil {
 			errors = err.Error()
-		}else{
-			formatedStkCallback = DecodeStkCallbackResponse(b)
-			//stkData := FormatedStkCallback{};
-			if(formatedStkCallback.MpesaReceiptNumber != nil){
-				success = true
-			}else{
-				errors = "Some fields are missing"
+		}
+
+		if errors == "" {
+			err = json.Unmarshal(b, &m)
+			if err != nil {
+				errors = err.Error()
+			} else {
+				formatedStkCallback = DecodeStkCallbackResponse(b)
+				//stkData := FormatedStkCallback{};
+				if formatedStkCallback.MpesaReceiptNumber != nil {
+					success = true
+				} else {
+					errors = "Some fields are missing"
+				}
+			}
+
+		}
+
+		if formatedStkCallback.MpesaReceiptNumber != nil {
+			updateOrder, err := config.StkPushData.DbConnection.Prepare("UPDATE " + config.StkPushData.TableName + " SET status = ?," + config.StkPushData.ReferenceNumber + "=? where " + config.StkPushData.MerchantRequestID + "=?")
+			if err != nil {
+				log.Println(err)
+			}
+			updateOrder.Exec(config.StkPushData.SuccessMpesaStatus, formatedStkCallback.MpesaReceiptNumber, formatedStkCallback.MerchantRequestID)
+			if config.SuccessStkCallBackFunction != nil {
+				config.SuccessStkCallBackFunction(formatedStkCallback)
 			}
 		}
-		
-    }
+		stkCallbackFeedback.Error = errors
+		stkCallbackFeedback.MpesaResponse = m
+		stkCallbackFeedback.Success = success
 
-	if (formatedStkCallback.MpesaReceiptNumber != nil){
-		updateOrder, err := config.StkPushData.DbConnection.Prepare("UPDATE "+config.StkPushData.TableName+" SET status = ?,"+config.StkPushData.ReferenceNumber+"=? where "+config.StkPushData.MerchantRequestID+"=?")
-		if err != nil {
-			log.Println(err)
-		}
-		updateOrder.Exec(config.StkPushData.SuccessMpesaStatus, formatedStkCallback.MpesaReceiptNumber,formatedStkCallback.MerchantRequestID)
-		if config.SuccessStkCallBackFunction != nil{
-			config.SuccessStkCallBackFunction(formatedStkCallback)
-		}
-	}
-	stkCallbackFeedback.Error =errors
-	stkCallbackFeedback.MpesaResponse = m
-	stkCallbackFeedback.Success = success
-
-	out, err := json.Marshal(formatedStkCallback)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(string(out))
-})
+		// out, err := json.Marshal(formatedStkCallback)
+		// if err != nil {
+		// 	panic(err)
+		// }
+		// fmt.Println(string(out))
+	})
 
 	//return stkCallbackFeedback
 
 }
 
-func DecodeStkCallbackResponse (b []byte) FormatedStkCallback{
+func DecodeStkCallbackResponse(b []byte) FormatedStkCallback {
 
 	formatedStkCallback := FormatedStkCallback{}
 
@@ -270,105 +267,104 @@ func DecodeStkCallbackResponse (b []byte) FormatedStkCallback{
 	err := json.Unmarshal(b, &stkCallbackResponse)
 	if err != nil {
 		log.Println(err)
-	}else{
-		formatedStkCallback.Amount =stkCallbackResponse.Body.StkCallback.CallbackMetadata.Item[0].Value
-		formatedStkCallback.CheckoutRequestID =stkCallbackResponse.Body.StkCallback.CheckoutRequestID
+	} else {
+		formatedStkCallback.Amount = stkCallbackResponse.Body.StkCallback.CallbackMetadata.Item[0].Value
+		formatedStkCallback.CheckoutRequestID = stkCallbackResponse.Body.StkCallback.CheckoutRequestID
 		formatedStkCallback.MerchantRequestID = stkCallbackResponse.Body.StkCallback.MerchantRequestID
 		formatedStkCallback.MpesaReceiptNumber = stkCallbackResponse.Body.StkCallback.CallbackMetadata.Item[1].Value
-		formatedStkCallback.PhoneNumber  = stkCallbackResponse.Body.StkCallback.CallbackMetadata.Item[3].Value
+		formatedStkCallback.PhoneNumber = stkCallbackResponse.Body.StkCallback.CallbackMetadata.Item[3].Value
 		formatedStkCallback.ResultCode = stkCallbackResponse.Body.StkCallback.ResultCode
 		formatedStkCallback.TransactionDate = stkCallbackResponse.Body.StkCallback.CallbackMetadata.Item[2].Value
 		formatedStkCallback.ResultDesc = stkCallbackResponse.Body.StkCallback.ResultDesc
 	}
 
 	return formatedStkCallback
-    
+
 }
 
-func SaveMpesaPaymentConfirmation(table PaymentTable,config Config) http.Handler {
+func SaveMpesaPaymentConfirmation(table PaymentTable, config Config) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
-	var errors string = ""
+		var errors string = ""
 
-	payment := Payment{}
-	
-	b, err := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
-	if err != nil {
-		errors =err.Error()
-	}
+		payment := Payment{}
 
-	if(errors == ""){
-		err = json.Unmarshal(b, &payment)
+		b, err := ioutil.ReadAll(r.Body)
+		defer r.Body.Close()
 		if err != nil {
 			errors = err.Error()
-		}else{
-			SaveMpesaPayment(table,payment,config);
 		}
-		
-    }
 
-	out, err := json.Marshal(payment)
-	if err != nil {
-		panic(err)
-	}
-	fmt.Println(string(out))
-})
-
-	//return stkCallbackFeedback
-
-}
-
-func GetTransactionQueryResponse(table PaymentTable,transQueryTable TransQueryTable, config Config) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-	var errors string = ""
-
-	transactionQueryCallbackFeedback := TransactionStatusResponse{}
-
-	var originatorConversationID string = ""
-
-	payment :=Payment{}
-
-	
-	b, err := ioutil.ReadAll(r.Body)
-	defer r.Body.Close()
-	if err != nil {
-		errors =err.Error()
-	}
-
-	if(errors == ""){
-		err = json.Unmarshal(b, &transactionQueryCallbackFeedback)
-		if err != nil {
-			errors = err.Error()
-		}else{
-			log.Println(transactionQueryCallbackFeedback)
-			payment,originatorConversationID = DecodeTransactionQueryCallbackResponse(b)
-			
-			emptyPayment := Payment{};
-			if(payment != emptyPayment){
-				var  accountNumber string = UpdateTransQueryTable(transQueryTable,originatorConversationID)
-				if accountNumber != ""{
-					payment.BillRefNumber = accountNumber
-					SaveMpesaPayment(table,payment,config);
-				}
-				
+		if errors == "" {
+			err = json.Unmarshal(b, &payment)
+			if err != nil {
+				errors = err.Error()
+			} else {
+				SaveMpesaPayment(table, payment, config)
 			}
+
 		}
-		
-    }
-	
-	// out, err := json.Marshal(payment)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// fmt.Println(string(out))
-})
+
+		// out, err := json.Marshal(payment)
+		// if err != nil {
+		// 	panic(err)
+		// }
+		// fmt.Println(string(out))
+	})
 
 	//return stkCallbackFeedback
 
 }
 
-func DecodeTransactionQueryCallbackResponse (b []byte) (Payment,string){
+func GetTransactionQueryResponse(table PaymentTable, transQueryTable TransQueryTable, config Config) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var errors string = ""
+
+		transactionQueryCallbackFeedback := TransactionStatusResponse{}
+
+		var originatorConversationID string = ""
+
+		payment := Payment{}
+
+		b, err := ioutil.ReadAll(r.Body)
+		defer r.Body.Close()
+		if err != nil {
+			errors = err.Error()
+		}
+
+		if errors == "" {
+			err = json.Unmarshal(b, &transactionQueryCallbackFeedback)
+			if err != nil {
+				errors = err.Error()
+			} else {
+				log.Println(transactionQueryCallbackFeedback)
+				payment, originatorConversationID = DecodeTransactionQueryCallbackResponse(b)
+
+				emptyPayment := Payment{}
+				if payment != emptyPayment {
+					var accountNumber string = UpdateTransQueryTable(transQueryTable, originatorConversationID)
+					if accountNumber != "" {
+						payment.BillRefNumber = accountNumber
+						SaveMpesaPayment(table, payment, config)
+					}
+
+				}
+			}
+
+		}
+
+		// out, err := json.Marshal(payment)
+		// if err != nil {
+		// 	panic(err)
+		// }
+		// fmt.Println(string(out))
+	})
+
+	//return stkCallbackFeedback
+
+}
+
+func DecodeTransactionQueryCallbackResponse(b []byte) (Payment, string) {
 
 	payment := Payment{}
 
@@ -379,9 +375,9 @@ func DecodeTransactionQueryCallbackResponse (b []byte) (Payment,string){
 	err := json.Unmarshal(b, &transactionQueryCallbackResponse)
 	if err != nil {
 		log.Println(err)
-	}else{
+	} else {
 		resultType := transactionQueryCallbackResponse.Result.ResultType
-		if(resultType ==0){
+		if resultType == 0 {
 			paybill := transactionQueryCallbackResponse.Result.ResultParameters.ResultParameter[0].Value.(string)
 			log.Println(paybill)
 			arrPaybill := strings.Split(paybill, "-")
@@ -399,19 +395,19 @@ func DecodeTransactionQueryCallbackResponse (b []byte) (Payment,string){
 			lastName := nameErr[len(nameErr)-1]
 
 			payment.FirstName = firstName
-			payment.LastName =lastName
-			payment.BusinessShortCode =businessShortCode
-			payment.MSISDN =phoneNumber
+			payment.LastName = lastName
+			payment.BusinessShortCode = businessShortCode
+			payment.MSISDN = phoneNumber
 			payment.TransID = transactionQueryCallbackResponse.Result.ResultParameters.ResultParameter[12].Value.(string)
 			payment.TransAmount = transactionQueryCallbackResponse.Result.ResultParameters.ResultParameter[10].Value.(string)
-			payment.TransTime =transactionQueryCallbackResponse.Result.ResultParameters.ResultParameter[9].Value.(string)
+			payment.TransTime = transactionQueryCallbackResponse.Result.ResultParameters.ResultParameter[9].Value.(string)
 		}
 	}
 
-	return payment,originatorConversationID
+	return payment, originatorConversationID
 }
 
-func TransactionQuery(config Config) TransactionQueryFeedback{
+func TransactionQuery(config Config) TransactionQueryFeedback {
 
 	var errors string = ""
 	var accessToken string = ""
@@ -423,80 +419,80 @@ func TransactionQuery(config Config) TransactionQueryFeedback{
 
 	tokenFeedback = GenerateMpesaToken(config)
 
-	if tokenFeedback.Success == false{
+	if !tokenFeedback.Success {
 		errors = tokenFeedback.Error
-	}else{
-		accessToken =tokenFeedback.AccessToken
-		var url string =""
-		if config.MpesaStkPushUrl==""{
-			if config.Env  == 1{
+	} else {
+		accessToken = tokenFeedback.AccessToken
+		var url string = ""
+		if config.MpesaStkPushUrl == "" {
+			if config.Env == 1 {
 				url = LIVE_MPESA_TRANSACTION_QUERY_URL
-			}else{
+			} else {
 				url = TEST_MPESA_TRANSACTION_QUERY_URL
 			}
 		}
-		
+
 		method := "POST"
-	
+
 		payload := map[string]any{
-			"Initiator":config.Initiator,
-			"SecurityCredential": EncryptWithPublicKey(config.InitiatorPassword,config.Env),
-			"CommandID": config.TransQueryCommandID,
-			"TransactionID": config.TransactionReference,
-			"OriginatorConversationID":config.TransQueryOriginatorConversationID,
-			"PartyA":config.MpesaShortCode,
-			"IdentifierType":config.IdentifierType,
-			"ResultURL":config.TransQueryResultURL,
-			"QueueTimeOutURL":config.TransQueryQueueTimeOutURL,
-			"Remarks":config.TransQueryRemarks,
-			"Occasion":config.TransQueryOccassion,
+			"Initiator":                config.Initiator,
+			"SecurityCredential":       EncryptWithPublicKey(config.InitiatorPassword, config.Env),
+			"CommandID":                config.TransQueryCommandID,
+			"TransactionID":            config.TransactionReference,
+			"OriginatorConversationID": config.TransQueryOriginatorConversationID,
+			"PartyA":                   config.MpesaShortCode,
+			"IdentifierType":           config.IdentifierType,
+			"ResultURL":                config.TransQueryResultURL,
+			"QueueTimeOutURL":          config.TransQueryQueueTimeOutURL,
+			"Remarks":                  config.TransQueryRemarks,
+			"Occasion":                 config.TransQueryOccassion,
 		}
-	
+
 		jsonPayload, err := json.Marshal(payload)
 
 		if err != nil {
-			errors =err.Error()
-		}else{
-			client := &http.Client {
-				}
+			errors = err.Error()
+		} else {
+			client := &http.Client{}
 			req, err := http.NewRequest(method, url, bytes.NewBuffer(jsonPayload))
 			if err != nil {
 				errors = err.Error()
-			}else{
+			} else {
 				req.Header.Add("Content-Type", "application/json")
 				req.Header.Add("Authorization", "Bearer "+accessToken)
 				res, err := client.Do(req)
 				if err != nil {
 					errors = err.Error()
-				}else{
+				} else {
 					defer res.Body.Close()
-		            body, err := ioutil.ReadAll(res.Body)
+					body, err := ioutil.ReadAll(res.Body)
 					if err != nil {
 						errors = err.Error()
-					}else{
+					} else {
 						err = json.Unmarshal(body, &m)
 						if err != nil {
 							errors = err.Error()
-						}else{
+						} else {
 							if responseCode, ok := m["ResponseCode"]; ok {
-								if responseCode == "0"{
+								if responseCode == "0" {
 									success = true
-									transQueryTable := TransQueryTable{};
-									if(config.TransQueryTable != transQueryTable){
+									transQueryTable := TransQueryTable{}
+									if config.TransQueryTable != transQueryTable {
 										transQueryData := TransQueryTableColumns{}
-										transQueryData.Status =config.TransQueryTable.DefaultStatus
-										transQueryData.ResponseDescription =m["ResponseDescription"]
+										transQueryData.Status = config.TransQueryTable.DefaultStatus
+										transQueryData.ResponseDescription = m["ResponseDescription"]
 										transQueryData.ConversationID = m["ConversationID"]
+										transQueryData.ResponseCode = m["ResponseCode"]
 										transQueryData.OriginatorConversationID = m["OriginatorConversationID"]
 										transQueryData.TransactionReference = config.TransactionReference
-										transQueryData.AccountReference= config.AccountNumber
-										SaveTransQueryData(transQueryData,config.TransQueryTable)
+										transQueryData.AccountReference = config.AccountNumber
+										SaveTransQueryData(transQueryData, config.TransQueryTable)
 									}
-								}else{
+								} else {
 									if errorMessage, ok := m["errorMessage"]; ok {
 										errors = errorMessage
-									}else{
-										errors ="Unknown error occured"
+									} else {
+										errors = "Unknown error occured"
 									}
 								}
 							}
@@ -511,27 +507,31 @@ func TransactionQuery(config Config) TransactionQueryFeedback{
 	transactionQueryFeedback.Error = errors
 	transactionQueryFeedback.MpesaResponse = m
 	transactionQueryFeedback.Success = success
-	
 	return transactionQueryFeedback
 }
 
-func SaveTransQueryData(data TransQueryTableColumns,db TransQueryTable){
-	save, err := db.DbConnection.Prepare("INSERT INTO "+db.TableName+"("+db.Columns.ConversationID+","+db.Columns.OriginatorConversationID+","+db.Columns.ResponseCode+","+db.Columns.AccountReference+","+db.Columns.ResponseDescription+","+db.Columns.Status+","+db.Columns.TransactionReference+") VALUES(?,?,?,?,?,?,?)")
+func SaveTransQueryData(data TransQueryTableColumns, db TransQueryTable) {
+	log.Println(data.ResponseCode)
+	save, err := db.DbConnection.Prepare("INSERT INTO " + db.TableName + "(" + db.Columns.ConversationID + "," + db.Columns.OriginatorConversationID + "," + db.Columns.ResponseCode + "," + db.Columns.AccountReference + "," + db.Columns.ResponseDescription + "," + db.Columns.Status + "," + db.Columns.TransactionReference + ") VALUES(?,?,?,?,?,?,?)")
 	if err != nil {
 		log.Println(err)
-	}
-	save.Exec(data.ConversationID, data.OriginatorConversationID, data.ResponseCode, data.AccountReference,data.ResponseDescription,data.Status,data.TransactionReference)
-}
-
-
-func UpdateTransQueryTable(transQueryTable TransQueryTable, originatorConversationID string) string{
-	var accountNumber string= GetTransactionQueryAccountNumber(transQueryTable, originatorConversationID)
-	if(accountNumber == ""){
-		updateOrder, err := transQueryTable.DbConnection.Prepare("UPDATE "+transQueryTable.TableName+" SET status = ?,"+transQueryTable.SuccessMpesaStatus+"=? where "+transQueryTable.Columns.OriginatorConversationID+"=?")
+	} else {
+		_, err = save.Exec(data.ConversationID, data.OriginatorConversationID, data.ResponseCode, data.AccountReference, data.ResponseDescription, data.Status, data.TransactionReference)
 		if err != nil {
 			log.Println(err)
-		}else{
-			_,err = updateOrder.Exec(transQueryTable.SuccessMpesaStatus,originatorConversationID)
+		}
+	}
+
+}
+
+func UpdateTransQueryTable(transQueryTable TransQueryTable, originatorConversationID string) string {
+	var accountNumber string = GetTransactionQueryAccountNumber(transQueryTable, originatorConversationID)
+	if accountNumber == "" {
+		updateOrder, err := transQueryTable.DbConnection.Prepare("UPDATE " + transQueryTable.TableName + " SET status = ?," + transQueryTable.SuccessMpesaStatus + "=? where " + transQueryTable.Columns.OriginatorConversationID + "=?")
+		if err != nil {
+			log.Println(err)
+		} else {
+			_, err = updateOrder.Exec(transQueryTable.SuccessMpesaStatus, originatorConversationID)
 			if err != nil {
 				log.Println(err)
 			}
@@ -540,7 +540,7 @@ func UpdateTransQueryTable(transQueryTable TransQueryTable, originatorConversati
 	return accountNumber
 }
 
-func GetTransactionQueryAccountNumber(table TransQueryTable, originatorConversationID string) string{
+func GetTransactionQueryAccountNumber(table TransQueryTable, originatorConversationID string) string {
 	var accountNumber string = ""
 	err := table.DbConnection.QueryRow("select "+table.Columns.AccountReference+" from "+table.TableName+" where "+table.Columns.OriginatorConversationID+" = ?", originatorConversationID).Scan(&accountNumber)
 	if err != nil {
@@ -549,19 +549,18 @@ func GetTransactionQueryAccountNumber(table TransQueryTable, originatorConversat
 	return accountNumber
 }
 
-func SaveMpesaPayment(table PaymentTable, payment Payment,config Config){
-	columns := table.Columns.TransactionType+","+table.Columns.TransID+","+table.Columns.TransTime+","+table.Columns.TransAmount+","+table.Columns.BusinessShortCode+","+table.Columns.BillRefNumber+","+table.Columns.InvoiceNumber+","+table.Columns.OrgAccountBalance+","+table.Columns.ThirdPartyTransID+","+table.Columns.MSISDN+","+table.Columns.FirstName+","+table.Columns.MiddleName+","+table.Columns.LastName
-	save, err := table.DbConnection.Prepare("INSERT INTO "+table.TableName+"("+columns+") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)")
+func SaveMpesaPayment(table PaymentTable, payment Payment, config Config) {
+	columns := table.Columns.TransactionType + "," + table.Columns.TransID + "," + table.Columns.TransTime + "," + table.Columns.TransAmount + "," + table.Columns.BusinessShortCode + "," + table.Columns.BillRefNumber + "," + table.Columns.InvoiceNumber + "," + table.Columns.OrgAccountBalance + "," + table.Columns.ThirdPartyTransID + "," + table.Columns.MSISDN + "," + table.Columns.FirstName + "," + table.Columns.MiddleName + "," + table.Columns.LastName
+	save, err := table.DbConnection.Prepare("INSERT INTO " + table.TableName + "(" + columns + ") VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)")
 	if err != nil {
 		log.Println(err)
 	}
-	_, err = save.Exec(payment.TransactionType,payment.TransID,payment.TransTime,payment.TransAmount,payment.BusinessShortCode,payment.BillRefNumber,payment.InvoiceNumber,payment.OrgAccountBalance,payment.ThirdPartyTransID,payment.MSISDN,payment.FirstName,payment.MiddleName,payment.LastName)
-	if err == nil{
-		if config.AfterPaymentFunction != nil{
+	_, err = save.Exec(payment.TransactionType, payment.TransID, payment.TransTime, payment.TransAmount, payment.BusinessShortCode, payment.BillRefNumber, payment.InvoiceNumber, payment.OrgAccountBalance, payment.ThirdPartyTransID, payment.MSISDN, payment.FirstName, payment.MiddleName, payment.LastName)
+	if err == nil {
+		if config.AfterPaymentFunction != nil {
 			config.AfterPaymentFunction(payment)
 		}
-	}else{
+	} else {
 		log.Println(err)
 	}
 }
-		
