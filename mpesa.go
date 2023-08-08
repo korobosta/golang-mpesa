@@ -247,11 +247,11 @@ func GetStkPushResponse(config Config) http.Handler {
 		stkCallbackFeedback.MpesaResponse = m
 		stkCallbackFeedback.Success = success
 
-		// out, err := json.Marshal(formatedStkCallback)
-		// if err != nil {
-		// 	panic(err)
-		// }
-		// fmt.Println(string(out))
+		out, err := json.Marshal(formatedStkCallback)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(string(out))
 	})
 
 	//return stkCallbackFeedback
@@ -305,11 +305,11 @@ func SaveMpesaPaymentConfirmation(table PaymentTable, config Config) http.Handle
 
 		}
 
-		// out, err := json.Marshal(payment)
-		// if err != nil {
-		// 	panic(err)
-		// }
-		// fmt.Println(string(out))
+		out, err := json.Marshal(payment)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(string(out))
 	})
 
 	//return stkCallbackFeedback
@@ -353,11 +353,11 @@ func GetTransactionQueryResponse(table PaymentTable, transQueryTable TransQueryT
 
 		}
 
-		// out, err := json.Marshal(payment)
-		// if err != nil {
-		// 	panic(err)
-		// }
-		// fmt.Println(string(out))
+		out, err := json.Marshal(payment)
+		if err != nil {
+			panic(err)
+		}
+		fmt.Println(string(out))
 	})
 
 	//return stkCallbackFeedback
